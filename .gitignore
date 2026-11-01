@@ -40,3 +40,4 @@ chiaki.conf
 .cache/
 *.vscode
 site/
+/manju-ng-license-notes.md
