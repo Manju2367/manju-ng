@@ -29,6 +29,7 @@ extern "C" {
 #include <QStandardPaths>
 #include <QCoreApplication>
 #include <QGuiApplication>
+#include <QScreen>
 #include <QFile>
 #include <QWidget>
 #include <QLabel>
@@ -2549,6 +2550,54 @@ QmlMainWindow::QmlMainWindow(const StreamSessionConnectInfo &connect_info)
     connect(session, &StreamSession::SessionQuit, qGuiApp, &QGuiApplication::quit);
 }
 
+QRect QmlMainWindow::geometryForCurrentScreens(const QRect &geometry)
+{
+    if (geometry.isEmpty())
+        return geometry;
+
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    if (screens.isEmpty())
+        return geometry;
+
+    const qint64 geometry_area = static_cast<qint64>(geometry.width()) * geometry.height();
+    qint64 visible_area = 0;
+    qint64 best_intersection_area = 0;
+    QScreen *best_screen = nullptr;
+
+    for (QScreen *screen : screens) {
+        const QRect intersection = geometry.intersected(screen->availableGeometry());
+        const qint64 intersection_area = intersection.isEmpty()
+            ? 0
+            : static_cast<qint64>(intersection.width()) * intersection.height();
+        visible_area += intersection_area;
+        if (intersection_area > best_intersection_area) {
+            best_intersection_area = intersection_area;
+            best_screen = screen;
+        }
+    }
+
+    // Keep windows that are still substantially visible, including windows spanning screens.
+    if (visible_area * 10 >= geometry_area * 9)
+        return geometry;
+
+    if (!best_screen)
+        best_screen = QGuiApplication::primaryScreen() ? QGuiApplication::primaryScreen() : screens.first();
+
+    const QRect available = best_screen->availableGeometry();
+    const QSize size(qMin(geometry.width(), available.width()),
+                     qMin(geometry.height(), available.height()));
+    QRect adjusted(geometry.topLeft(), size);
+
+    if (best_intersection_area == 0) {
+        adjusted.moveCenter(available.center());
+    } else {
+        adjusted.moveLeft(qBound(available.left(), adjusted.left(), available.right() - adjusted.width() + 1));
+        adjusted.moveTop(qBound(available.top(), adjusted.top(), available.bottom() - adjusted.height() + 1));
+    }
+
+    return adjusted;
+}
+
 QmlMainWindow::~QmlMainWindow()
 {
     Q_ASSERT(!placebo_swapchain);
@@ -2909,7 +2958,7 @@ void QmlMainWindow::show()
     {
         if(!settings->GetGeometry().isEmpty())
         {
-            setGeometry(settings->GetGeometry());
+            setGeometry(geometryForCurrentScreens(settings->GetGeometry()));
             showNormal();
         }
         else
@@ -5201,7 +5250,7 @@ renderer_backend_ready:
             {
                 if(!this->settings->GetGeometry().isEmpty())
                 {
-                    setGeometry(this->settings->GetGeometry());
+                    setGeometry(geometryForCurrentScreens(this->settings->GetGeometry()));
                     normalTime();
                 }
                 else

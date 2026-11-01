@@ -743,7 +743,7 @@ void QmlBackend::setConnectState(PsnConnectState connect_state)
     {
         if(!this->settings->GetGeometry().isEmpty())
         {
-            window->setGeometry(this->settings->GetGeometry());
+            window->setGeometry(QmlMainWindow::geometryForCurrentScreens(this->settings->GetGeometry()));
             window->normalTime();
         }
         else
@@ -2380,7 +2380,7 @@ void QmlBackend::applyStartupWindowSizing()
     {
         window->normalTime();
         if(!settings->GetStreamGeometry().isEmpty())
-            window->setGeometry(settings->GetStreamGeometry());
+            window->setGeometry(QmlMainWindow::geometryForCurrentScreens(settings->GetStreamGeometry()));
     }
     else if (connect_info.video_profile.width > 0 && connect_info.video_profile.height > 0)
     {

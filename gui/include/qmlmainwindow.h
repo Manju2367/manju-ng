@@ -105,6 +105,7 @@ public:
     QmlMainWindow(Settings *settings,  bool exit_app_on_stream_exit = false);
     QmlMainWindow(const StreamSessionConnectInfo &connect_info);
     ~QmlMainWindow();
+    static QRect geometryForCurrentScreens(const QRect &geometry);
     void updateWindowType(WindowType type);
     void setSettings(Settings *new_settings);
 
